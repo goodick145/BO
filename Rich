@@ -1,0 +1,103 @@
+local DropGUI = Instance.new("ScreenGui")
+local main = Instance.new("Frame")
+local Equip = Instance.new("TextButton")
+local ToggleButton = Instance.new("TextButton")
+local isRunning = false
+
+DropGUI.Name = "Drop GUI"
+DropGUI.Parent = game.CoreGui
+DropGUI.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+main.Name = "main"
+main.Parent = DropGUI
+main.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+main.BackgroundTransparency = 0.5
+main.BorderColor3 = Color3.fromRGB(0, 255, 102)
+main.BorderSizePixel = 2
+main.Position = UDim2.new(0.0809, 0, 0.2037, 0)
+main.Size = UDim2.new(0, 150, 0, 100)
+main.Active = true
+main.Draggable = true
+
+Equip.Name = "Wish"
+Equip.Parent = main
+Equip.BackgroundColor3 = Color3.fromRGB(255, 50, 110)
+Equip.BackgroundTransparency = 0.2
+Equip.BorderColor3 = Color3.fromRGB(255, 128, 102)
+Equip.BorderSizePixel = 1
+Equip.Position = UDim2.new(0.1, 0, 0.12, 0)
+Equip.Size = UDim2.new(0, 50, 0, 40)
+Equip.Font = Enum.Font.SourceSans
+Equip.Text = "DESERT"
+Equip.TextColor3 = Color3.fromRGB(0, 0, 0)
+Equip.TextScaled = true
+Equip.TextWrapped = true
+
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Parent = main
+ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 255, 110)
+ToggleButton.BackgroundTransparency = 0.2
+ToggleButton.BorderColor3 = Color3.fromRGB(102, 255, 102)
+ToggleButton.BorderSizePixel = 1
+ToggleButton.Position = UDim2.new(0.1, 0, 0.65, 0)
+ToggleButton.Size = UDim2.new(0, 120, 0, 40)
+ToggleButton.Font = Enum.Font.SourceSans
+ToggleButton.Text = "Toggle OFF"
+ToggleButton.TextColor3 = Color3.fromRGB(0, 0, 0)
+ToggleButton.TextScaled = true
+ToggleButton.TextWrapped = true
+
+-- Hàm sử dụng Dragonballs
+local function useDragonballs()
+    local player = game.Players.LocalPlayer
+    local rs = game:GetService("ReplicatedStorage")
+    local itemRemote = rs.RemoteEvents.ItemRemote
+    local storageRemote = rs.RemoteEvents.ItemStorageRemote
+
+    local names = {
+        "One Star Dragonball",
+        "Two Star Dragonball",
+        "Three Star Dragonball",
+        "Four Star Dragonball",
+        "Five Star Dragonball",
+        "Six Star Dragonball",
+        "Seven Star Dragonball"
+    }
+
+    for i = 1, 7 do
+        local tool = player.Backpack:FindFirstChild(names[i])
+        if tool then
+            player.Character.Humanoid:EquipTool(tool)
+            itemRemote:FireServer()
+        end
+        storageRemote:FireServer("ItemStorage" .. i)
+        task.wait()
+    end
+
+    rs.RemoteEvents.ShenronRemote:FireServer("Be Rich")
+
+    -- Gửi lại vào ItemStorage
+    for i = 1, 7 do
+        storageRemote:FireServer("ItemStorage" .. i)
+    end
+end
+
+-- Tự động chạy khi bật toggle
+local function autoRun()
+    while isRunning do
+        useDragonballs()
+        task.wait(0.2)
+    end
+end
+
+ToggleButton.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    ToggleButton.Text = isRunning and "Toggle ON" or "Toggle OFF"
+    if isRunning then
+        autoRun()
+    end
+end)
+
+Equip.MouseButton1Click:Connect(function()
+    useDragonballs()
+end)
