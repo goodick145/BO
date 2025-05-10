@@ -1,0 +1,199 @@
+-- CONFIG
+getgenv().G = true
+getgenv().Creator = " - HalloweenGaster"
+
+-- SERVICES & VARIABLES
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local remote = ReplicatedStorage:WaitForChild("RemoteEvents"):WaitForChild("BladeCombatRemote")
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local bossNames = {"Killua", "Gon", "Ultra Instinct Goku"}
+local active = true  -- GUI sẽ bật ngay khi chạy
+local hovering = false
+local lastBossPosition = nil
+
+local damageAmount = 1e18
+local killThreshold = 10
+local maxDistance = 100
+
+-- UI SETUP
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.ResetOnSpawn = false
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 120, 0, 40)
+toggleBtn.Position = UDim2.new(0, 20, 0, 100)
+toggleBtn.Text = "Hover: ON"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Parent = gui
+
+local hpLabel = Instance.new("TextLabel")
+hpLabel.Size = UDim2.new(0, 200, 0, 30)
+hpLabel.Position = UDim2.new(0, 20, 0, 150)
+hpLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+hpLabel.TextColor3 = Color3.new(1, 1, 1)
+hpLabel.TextScaled = true
+hpLabel.Text = "Boss HP: N/A"
+hpLabel.Parent = gui
+
+-- UTILITIES
+local function getHRP()
+    character = player.Character or player.CharacterAdded:Wait()
+    return character:WaitForChild("HumanoidRootPart")
+end
+
+local function isAlive(model)
+    local hum = model and model:FindFirstChildOfClass("Humanoid")
+    return hum and hum.Health > 0
+end
+
+local function getBoss()
+    for _, name in ipairs(bossNames) do
+        local boss = workspace:FindFirstChild("Live") and workspace.Live:FindFirstChild(name)
+        if boss and isAlive(boss) and boss:FindFirstChild("HumanoidRootPart") then
+            lastBossPosition = boss.HumanoidRootPart.Position
+            return boss
+        end
+    end
+    return nil
+end
+
+-- INSTANT KILL + KILL AURA LOOP
+task.spawn(function()
+    while true do
+        if active then
+            sethiddenproperty(player, "SimulationRadius", math.huge)
+            sethiddenproperty(player, "MaxSimulationRadius", math.huge)
+
+            local hrp = getHRP()
+            local liveFolder = workspace:FindFirstChild("Live")
+
+            if liveFolder then
+                for _, npc in ipairs(liveFolder:GetChildren()) do
+                    if npc:IsA("Model") then
+                        local hum = npc:FindFirstChildOfClass("Humanoid")
+                        local npcHRP = npc:FindFirstChild("HumanoidRootPart")
+                        if hum and npcHRP and hum.Health > 0 then
+                            local dist = (hrp.Position - npcHRP.Position).Magnitude
+                            if dist <= maxDistance then
+                                for i = 1, 2 do
+                                    pcall(function()
+                                        remote:FireServer(true, npcHRP.Position, npcHRP.CFrame)
+                                    end)
+                                    task.wait(0.05)
+                                end
+                                -- Kill aura với điều kiện riêng
+                                pcall(function()
+                                    local name = npc.Name
+                                    local alreadyDamaged = hum.Health < hum.MaxHealth
+                                    if name == "Killua" or name == "Gon" or name == "Ultra Instinct Goku" then
+                                        if alreadyDamaged then
+                                            hum.Health = hum.Health - damageAmount
+                                            if hum.Health <= killThreshold then
+                                                hum.Health = 0
+                                            end
+                                        end
+                                    else
+                                        hum.Health = hum.Health - damageAmount
+                                        if hum.Health <= killThreshold then
+                                            hum.Health = 0
+                                        end
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.25)
+    end
+end)
+
+-- HOVER LOOP (Fix rung + update boss HP)
+local function hoverLoop()
+    if hovering then return end
+    hovering = true
+
+    while active do
+        local hrp = getHRP()
+        local boss = getBoss()
+
+        if boss and isAlive(boss) then
+            local bossHRP = boss.HumanoidRootPart
+            local hum = boss:FindFirstChildOfClass("Humanoid")
+            lastBossPosition = bossHRP.Position
+
+            -- Cập nhật HP
+            hpLabel.Text = string.format("Boss HP: %s - %.0f", boss.Name, hum.Health)
+
+            -- Fly lên cao yên ổn (không rung)
+            hrp.Anchored = true
+            local targetPos = bossHRP.Position + Vector3.new(0, 500, 0)
+            if (hrp.Position - targetPos).Magnitude > 5 then
+                hrp.CFrame = CFrame.new(targetPos)
+                task.wait(0.25)
+            end
+
+            -- Xuống đánh
+            hrp.CFrame = CFrame.new(bossHRP.Position + Vector3.new(0, 2, 0))
+            task.wait(0.1)
+            hrp.Anchored = false
+
+            -- Gây sát thương mở khóa Gon/Killua/Goku
+            for i = 1, 3 do
+                pcall(function()
+                    remote:FireServer(false, bossHRP.Position, bossHRP.CFrame)
+                end)
+                task.wait(0.1)
+            end
+
+            task.wait(0.5)
+        elseif lastBossPosition then
+            hpLabel.Text = "Boss HP: Waiting..."
+            hrp.Anchored = true
+            hrp.CFrame = CFrame.new(lastBossPosition + Vector3.new(0, 500, 0))
+            task.wait(1)
+        else
+            hpLabel.Text = "Boss HP: N/A"
+            task.wait(1)
+        end
+    end
+
+    pcall(function()
+        hrp.Anchored = false
+        hpLabel.Text = "Boss HP: N/A"
+    end)
+    hovering = false
+end
+
+-- CHARACTER RELOAD SUPPORT
+player.CharacterAdded:Connect(function(char)
+    character = char
+    hrp = character:WaitForChild("HumanoidRootPart")
+    if active then
+        task.delay(2, function()
+            if active then hoverLoop() end
+        end)
+    end
+end)
+
+-- TOGGLE BUTTON (Không cần bấm nữa vì tự bật ngay khi chạy)
+toggleBtn.MouseButton1Click:Connect(function()
+    active = not active
+    if active then
+        toggleBtn.Text = "Hovering..."
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 170, 0)
+        task.spawn(hoverLoop)
+        task.wait(0.5)
+        toggleBtn.Text = "Hover: ON"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+    else
+        toggleBtn.Text = "Hover: OFF"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    end
+end)
