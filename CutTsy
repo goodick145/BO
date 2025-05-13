@@ -163,7 +163,7 @@ createButton("Check Item📈", 2, autoEquipItems)  -- Gọi hàm autoEquipItems 
 createButton("Uoc 1 Lan🐉", 3, useDragonballs)
 
 -- Toggle for Auto Wish
-local autoWishBtn = createButton("Auto Wish🤖: OFF", 4, function(btn)
+local autoWishBtn = createButton("Auto Wish🤖: OFF", 5, function(btn)
     getgenv().Setting.AutoWish = not getgenv().Setting.AutoWish
     -- Cập nhật lại trạng thái của nút Auto Wish
     if getgenv().Setting.AutoWish then
@@ -174,7 +174,7 @@ local autoWishBtn = createButton("Auto Wish🤖: OFF", 4, function(btn)
 end)
 
 -- Dropdown for Wish selection
-local wishes = { "Better Clothes", "Be Rich", "Be Reborn", "The Strongest" }
+local wishes = { "Better Clothes", "Be Rich", "Be Reborn", "The Strongest", "Be Rewarded" }
 local wishIndex = 1
 local dropdown = Instance.new("TextButton", main)
 dropdown.Size = UDim2.new(0.9, 0, 0, 30)
