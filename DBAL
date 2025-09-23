@@ -1,0 +1,200 @@
+--// SETUP
+getgenv().Setting = {
+    AutoEquipItem = true,
+    EquipDelay    = 0,
+    AutoWish      = false,
+    SelectedWish  = "Better Clothes"
+}
+
+local Players          = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local lp               = Players.LocalPlayer
+local backpack         = lp:WaitForChild("Backpack")
+local character        = lp.Character or lp.CharacterAdded:Wait()
+
+--// GUI
+local gui  = Instance.new("ScreenGui")
+gui.Name   = "DragonballAutoGUI"
+gui.ResetOnSpawn = false
+gui.Parent = lp:WaitForChild("PlayerGui")
+
+local main = Instance.new("Frame", gui)
+main.BackgroundColor3     = Color3.fromRGB(20,20,20)
+main.BackgroundTransparency= 0.15
+main.BorderColor3         = Color3.fromRGB(0,255,127)
+main.BorderSizePixel      = 2
+main.Position             = UDim2.new(0.05,0,0.25,0)
+main.Size                 = UDim2.new(0,250,0,330)
+main.Active, main.Draggable= true, true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,8)
+
+local title = Instance.new("TextLabel", main)
+title.Text = "Combo Cụt Tay"
+title.Size = UDim2.new(1,0,0,30)
+title.TextColor3 = Color3.fromRGB(0,255,127)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+
+----------------------------------------------------------------
+--// FUNCTION: AUTO EQUIP ITEM
+local function autoEquipItems()
+    if not getgenv().Setting.AutoEquipItem then return end
+    local equipped = {}
+    for _, item in ipairs(backpack:GetChildren()) do
+        if item:IsA("Tool") and item:FindFirstChild("BagPart") then
+            local oh = item.BagPart:FindFirstChild("Overhead")
+            local rarity = oh and oh:FindFirstChild("Rarity")
+            local enchant = oh and oh:FindFirstChild("Enchantment")
+            if rarity and enchant then
+                local validRarity = {
+                    ["Unobtainable/Legendary"] = true, ["Unobtainable/Mythical"] = true,
+                    ["Mythical"] = true, ["Legendary"] = true
+                }
+                local validEnchant = {
+                    ["Mythical"]=true,["Arcane"]=true,["Heroic"]=true,["Steady"]=true,
+                    ["Mighty"]=true,["Divine"]=true,["Heavy"]=true,["Reinforced"]=true,
+                    ["quality"]=true,["Blessed"]=true,["Firn"]=true,["Secure"]=true,
+                    ["Flawless"]=true,["Conqueror's"]=true
+                }
+                if validRarity[rarity.Text] and validEnchant[enchant.Text] then
+                    table.insert(equipped,item)
+                end
+            end
+        end
+    end
+    for _, itm in ipairs(equipped) do
+        itm.Parent = character
+        task.wait(getgenv().Setting.EquipDelay)
+    end
+end
+
+----------------------------------------------------------------
+--// FUNCTION: EQUIP + STORE 7 DRAGONBALLS
+local function equipAllDragonballs()
+    local names = {
+        "One Star Dragonball","Two Star Dragonball","Three Star Dragonball",
+        "Four Star Dragonball","Five Star Dragonball","Six Star Dragonball",
+        "Seven Star Dragonball"
+    }
+    for i,name in ipairs(names) do
+        local tool = backpack:FindFirstChild(name)
+        if tool then
+            tool.Parent = character
+            task.wait()
+            game:GetService("ReplicatedStorage").RemoteEvents.ItemStorageRemote:FireServer("ItemStorage"..i)
+            task.wait()
+        end
+    end
+end
+
+----------------------------------------------------------------
+--// FUNCTION: USE DRAGONBALLS + WISH
+local function useDragonballs()
+    local names = {
+        "One Star Dragonball","Two Star Dragonball","Three Star Dragonball",
+        "Four Star Dragonball","Five Star Dragonball","Six Star Dragonball",
+        "Seven Star Dragonball"
+    }
+    for i=1,7 do
+        local tool = backpack:FindFirstChild(names[i])
+        if tool then
+            character.Humanoid:EquipTool(tool)
+            game:GetService("ReplicatedStorage").RemoteEvents.ItemRemote:FireServer()
+        end
+        game:GetService("ReplicatedStorage").RemoteEvents.ItemStorageRemote:FireServer("ItemStorage"..i)
+        task.wait()
+    end
+    game:GetService("ReplicatedStorage").RemoteEvents.ShenronRemote:FireServer(getgenv().Setting.SelectedWish)
+    for i=1,7 do
+        game:GetService("ReplicatedStorage").RemoteEvents.ItemStorageRemote:FireServer("ItemStorage"..i)
+    end
+end
+
+----------------------------------------------------------------
+--// FUNCTION: DUPE ITEM & ARMOR
+local function dupeItem()
+    game:GetService("ReplicatedStorage").RemoteEvents.ItemRemote:FireServer()
+    game:GetService("ReplicatedStorage").RemoteEvents.ItemStorageRemote:FireServer("ItemStorage24")
+end
+
+local function dupeArmor()
+    game:GetService("ReplicatedStorage").RemoteEvents.ItemRemote:FireServer()
+    game:GetService("ReplicatedStorage").RemoteEvents.BagStorageRemote:FireServer("BagStorage6")
+end
+
+----------------------------------------------------------------
+--// BUTTON CREATOR
+local function createButton(text, order, callback)
+    local btn = Instance.new("TextButton", main)
+    btn.Size = UDim2.new(0.9,0,0,30)
+    btn.Position = UDim2.new(0.05,0,0,35 + (order-1)*35)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Text = text
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.AutoButtonColor = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+    btn.MouseButton1Click:Connect(function() callback(btn) end)
+    return btn
+end
+
+-- Toggle UI
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Size = UDim2.new(0,100,0,30)
+toggleBtn.Position = UDim2.new(0,10,0,10)
+toggleBtn.Text = "Toggle UI"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+toggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0,6)
+toggleBtn.MouseButton1Click:Connect(function()
+    main.Visible = not main.Visible
+end)
+
+----------------------------------------------------------------
+-- Buttons
+createButton("Auto Ke Con Me",1,autoEquipItems)
+createButton("Check Item📈",2,autoEquipItems)
+createButton("Uoc 1 Lan🐉",3,useDragonballs)
+
+-- Auto Wish toggle
+createButton("Auto Wish🤖: OFF",4,function(btn)
+    getgenv().Setting.AutoWish = not getgenv().Setting.AutoWish
+    btn.Text = getgenv().Setting.AutoWish and "Auto Wish🤖: ON" or "Auto Wish🤖: OFF"
+end)
+
+-- Dropdown wish
+local wishes = {"Better Clothes","Be Rich","Be Reborn","The Strongest","Be Rewarded"}
+local wishIndex = 1
+local dropdown = Instance.new("TextButton", main)
+dropdown.Size = UDim2.new(0.9,0,0,30)
+dropdown.Position = UDim2.new(0.05,0,0,35)
+dropdown.BackgroundColor3 = Color3.fromRGB(40,40,40)
+dropdown.TextColor3 = Color3.fromRGB(255,255,255)
+dropdown.Text = "Select Wish: "..wishes[wishIndex]
+dropdown.Font = Enum.Font.Gotham
+dropdown.TextSize = 14
+Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0,6)
+dropdown.MouseButton1Click:Connect(function()
+    wishIndex = wishIndex % #wishes + 1
+    getgenv().Setting.SelectedWish = wishes[wishIndex]
+    dropdown.Text = "Select Wish: "..getgenv().Setting.SelectedWish
+end)
+
+createButton("Cất Dái Rồng📥",5,equipAllDragonballs)
+createButton("Dupe Item💣",6,dupeItem)
+createButton("Dupe Armor💣",7,dupeArmor)
+
+----------------------------------------------------------------
+-- AUTO WISH LOOP
+task.spawn(function()
+    while true do
+        if getgenv().Setting.AutoWish then
+            useDragonballs()
+        end
+        task.wait()
+    end
+end)
